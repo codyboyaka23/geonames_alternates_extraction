@@ -33,14 +33,14 @@ do
     # se trovo piu' definizioni
     if [[ ${#ALTERNATES_ARRAY[@]} > 1 ]]; then
         # seleziono tra le definizioni in lingua quelle con preferredName = 1
-        PREF_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*$" -) )
-        PREF_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*$" -)      
+        PREF_ARRAY=( $(echo ${ALTERNATES_ARRAY[*]} | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*$" -) )
+        PREF_ARRAY_STRING=$(echo ${ALTERNATES_ARRAY[*]} | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*$" -)      
         # seleziono se ci sono definizioni che hanno sia preferred=1 che shortname=1
-        PREF_AND_SHORT_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*$" -) )
-        PREF_AND_SHORT_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*$" -)
+        PREF_AND_SHORT_ARRAY=( $(echo ${ALTERNATES_ARRAY[*]} | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*$" -) )
+        PREF_AND_SHORT_ARRAY_STRING=$(echo ${ALTERNATES_ARRAY[*]} | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*$" -)
         # seleziono definizione sono solo shortname=1
-        SHORT_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*$" -) )
-        SHORT_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*$" -)
+        SHORT_ARRAY=( $(echo ${ALTERNATES_ARRAY[*]} | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*$" -) )
+        SHORT_ARRAY_STRING=$(echo ${ALTERNATES_ARRAY[*]} | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*$" -)
 
         # valuto quante definizioni preferred=1 in lingua primaria
         if [[ ${#PREF_ARRAY[@]} == 0 ]]; then
@@ -112,7 +112,7 @@ do
         fi
     elif [[ ${#ALTERNATES_ARRAY[@]} == 1 ]]; then
         # se trovo una sola definizione alternate  allora ok
-        IFS=";" read -a X <<< $ALTERNATES_STRING
+        IFS=";" read -a X <<< ${ALTERNATES_ARRAY[0]}
         name_local=${X[3]}
     elif [[ ${#ALTERNATES_ARRAY[@]} == 0 ]];then
         # se non trovo nessuna definizione in alternate allora uso quella inglese
