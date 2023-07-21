@@ -1,31 +1,29 @@
 #!/bin/bash
-OUTPUT="csv/countries.csv"
-SOURCE_COUNTRIES="tsv/countryInfo.txt"
-SOURCE="tmp/countries.csv"
-ALTERNATES="tmp/Alternates.csv"
-DEBUG="csv/debug_countries.csv"
+OUTPUT="csv/admin1_debug.csv"
+SOURCE_ADMIN="tsv/admin1CodesASCII.txt"
+SOURCE="tmp/admin1.csv"
+ALTERNATES="tmp/AlternatesForAdmin1.csv"
+COUNTRIES="tmp/countries.csv"
 
-echo "iso_3166_a2;iso_3166_a3;iso_3166_n;name_english;name_local;telephone_prefix;postal_code_regex;date_format;geoname_id;" > $OUTPUT
-echo "iso_3166_a2;iso_3166_a3;iso_3166_n;name_english;name_local;telephone_prefix;postal_code_regex;date_format;geoname_id;" > $DEBUG
+echo "country_iso_3166_a2;name_english;name_ascii;name_local;geoname_id;MESSAGE;" > $OUTPUT
 
-cat $SOURCE_COUNTRIES > $SOURCE
-sed -i '1d' $SOURCE
+cat $SOURCE_ADMIN > $SOURCE
 sed -i 's/\t/;/g' $SOURCE
 
-while IFS= read -r COUNTRY_LINE
+while IFS= read -r ADMIN_LINE
 do
-    IFS=';' read -a COUNTRY_LINE_ARRAY <<< $COUNTRY_LINE
-    
-    preferred_lang=${COUNTRY_LINE_ARRAY[15]:0:2}
-    iso_3166_a2=${COUNTRY_LINE_ARRAY[0]}
-    iso_3166_a3=${COUNTRY_LINE_ARRAY[1]}
-    iso_3166_n=${COUNTRY_LINE_ARRAY[2]}
-    name_english=${COUNTRY_LINE_ARRAY[4]}
+    IFS=';' read -a ADMIN_LINE_ARRAY <<< $ADMIN_LINE
+    country_iso_3166_a2=${ADMIN_LINE_ARRAY[0]:0:2}
+    name_english=${ADMIN_LINE_ARRAY[1]}
+    name_ascii=${ADMIN_LINE_ARRAY[2]}
     name_local='NULL'
-    telephone_prefix=${COUNTRY_LINE_ARRAY[12]}
-    postal_code_regex==${COUNTRY_LINE_ARRAY[14]}
-    date_format='NULL'
-    geoname_id=${COUNTRY_LINE_ARRAY[16]}
+    geoname_id=${ADMIN_LINE_ARRAY[3]}
+    MESSAGE="NULL"
+
+    # seleziono country di riferimento basandomi su ISO per avere la iso della lingua principale
+    COUNTRY_STRING=$(grep -E "^$country_iso_3166_a2" $COUNTRIES)
+    IFS=';' read -a COUNTRY_STRING_ARRAY <<< $COUNTRY_STRING
+    preferred_lang=${COUNTRY_STRING_ARRAY[15]:0:2}
 
     # seleziono gruppo di definizioni alternates basato solo su lingua primaria e geonameid
     ALTERNATES_STRING=$(grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;$" $ALTERNATES)
@@ -35,14 +33,14 @@ do
     # se trovo piu' definizioni
     if [[ ${#ALTERNATES_ARRAY[@]} > 1 ]]; then
         # seleziono tra le definizioni in lingua quelle con preferredName = 1
-        PREF_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*;.*;.*;$" -) )
-        PREF_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*;.*;.*;$" -)      
+        PREF_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*$" -) )
+        PREF_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;;.*$" -)      
         # seleziono se ci sono definizioni che hanno sia preferred=1 che shortname=1
-        PREF_AND_SHORT_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*;.*;.*;$" -) )
-        PREF_AND_SHORT_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*;.*;.*;$" -)
+        PREF_AND_SHORT_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*$" -) )
+        PREF_AND_SHORT_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;1;1;.*$" -)
         # seleziono definizione sono solo shortname=1
-        SHORT_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*;.*;.*;$" -) )
-        SHORT_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*;.*;.*;$" -)
+        SHORT_ARRAY=( $(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*$" -) )
+        SHORT_ARRAY_STRING=$(echo $ALTERNATES_STRING | grep -E "^[0-9]+;$geoname_id;$preferred_lang;.*;;1;.*$" -)
 
         # valuto quante definizioni preferred=1 in lingua primaria
         if [[ ${#PREF_ARRAY[@]} == 0 ]]; then
@@ -53,6 +51,7 @@ do
                 # o prendo la prima definizione alternate in lingua 
                 IFS=";" read -a X <<< ${ALTERNATES_ARRAY[0]}
                 name_local=${X[3]}
+                MESSAGE='0 preferred 0 shortname tra gli alternates trovati'
                 # o il nome inglese
                 # name_local=$name_english
             fi   
@@ -72,6 +71,7 @@ do
                 # per ora prendo la prima arbitrariamente
                 IFS=";" read -a X <<< ${PREF_AND_SHORT_ARRAY[0]}
                 name_local=${X[3]}
+                MESSAGE='>1 sia preferred che shortname tra gli alternates trovati'
             elif [[ ${#PREF_AND_SHORT_ARRAY[@]} == 0 ]]; then
                 # se non ho neanche una definizione sia preferred che short
                 # valuto eventuali definizioni solamente short
@@ -84,13 +84,7 @@ do
                     # per ora prendo la prima arbitrariamente
                     IFS=";" read -a X <<< ${SHORT_ARRAY[0]}
                     name_local=${X[3]}
-                elif [[ ${#SHORT_ARRAY[@]} == 0 ]]; then
-                    #  se non ho neanche uno short name
-                    # qua o prendo la prima definizione alternate in lingua 
-                    IFS=";" read -a X <<< ${ALTERNATES_ARRAY[0]}
-                    name_local=${X[3]}
-                    # o il nome inglese
-                    # name_local=$name_english
+                    MESSAGE='>1 shortname, non preferred tra gli alternates trovati'
                 fi
             fi
         fi
@@ -101,11 +95,9 @@ do
     elif [[ ${#ALTERNATES_ARRAY[@]} == 0 ]];then
         # se non trovo nessuna definizione in alternate allora uso quella inglese
         name_local=$name_english
+        MESSAGE='0 alternates trovati'
     fi
 
-    echo $iso_3166_a2';'$iso_3166_a3';'$iso_3166_n';'$name_english';'$name_local';'$telephone_prefix';'$postal_code_regex';'$date_format';'$geoname_id';'>> $OUTPUT
-
+    # STAMPA CSV
+    echo $country_iso_3166_a2';'$name_english';'$name_ascii';'$name_local';'$geoname_id';'$MESSAGE';' >> $OUTPUT
 done < "$SOURCE"
-
-# filtro per debug quelle righe in cui il nomeinglse coincide con il nomelocal
-grep -E "[A-Z]{2};[A-Z]{3};[0-9]{3};(.*);\1;.*;" $OUTPUT >> $DEBUG
