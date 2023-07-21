@@ -46,15 +46,27 @@ do
         if [[ ${#PREF_ARRAY[@]} == 0 ]]; then
             # se non ho definizioni preferred
             # valuto la presenza di shortname=1
-            if [[ ${#SHORT_ARRAY[@]} == 0 ]];then
-                # se non ho definizioni shortname
-                # o prendo la prima definizione alternate in lingua 
-                IFS=";" read -a X <<< ${ALTERNATES_ARRAY[0]}
-                name_local=${X[3]}
-                MESSAGE='0 preferred 0 shortname tra gli alternates trovati'
-                # o il nome inglese
-                # name_local=$name_english
-            fi   
+            # BOF blocco da ripetere
+                if [[ ${#SHORT_ARRAY[@]} == 0 ]];then
+                    # se non ho definizioni shortname
+                    # o prendo la prima definizione alternate in lingua 
+                    IFS=";" read -a X <<< ${ALTERNATES_ARRAY[0]}
+                    name_local=${X[3]}
+                    MESSAGE='0 preferred 0 shortname tra gli alternates trovati'
+                    # o il nome inglese
+                    # name_local=$name_english
+                elif [[ ${#SHORT_ARRAY[@]} == 1 ]]; then
+                    # se ho un solo shortname=1 allora ok
+                    IFS=";" read -a X <<< $SHORT_ARRAY_STRING
+                    name_local=${X[3]}
+                elif [[ ${#SHORT_ARRAY[@]} > 1 ]]; then
+                    # se piu' di una definizione risulta shortname
+                    # per ora prendo la prima arbitrariamente
+                    IFS=";" read -a X <<< ${SHORT_ARRAY[0]}
+                    name_local=${X[3]}
+                    MESSAGE='>1 shortname, 0 preferred tra gli alternates trovati'
+                fi
+            # EOF blocco da ripetere
         elif [[ ${#PREF_ARRAY[@]} == 1 ]]; then
             # se una sola definizione e' preferred=1 allora ok
             IFS=";" read -a X <<< $PREF_ARRAY_STRING
@@ -75,17 +87,27 @@ do
             elif [[ ${#PREF_AND_SHORT_ARRAY[@]} == 0 ]]; then
                 # se non ho neanche una definizione sia preferred che short
                 # valuto eventuali definizioni solamente short
-                if [[ ${#SHORT_ARRAY[@]} == 1 ]]; then
-                    # se ho un solo shortname=1 allora ok
-                    IFS=";" read -a X <<< $SHORT_ARRAY_STRING
-                    name_local=${X[3]}
-                elif [[ ${#SHORT_ARRAY[@]} > 1 ]]; then
-                    # se piu' di una definizione risulta shortname
-                    # per ora prendo la prima arbitrariamente
-                    IFS=";" read -a X <<< ${SHORT_ARRAY[0]}
-                    name_local=${X[3]}
-                    MESSAGE='>1 shortname, non preferred tra gli alternates trovati'
-                fi
+                # BOF blocco da ripetere
+                    if [[ ${#SHORT_ARRAY[@]} == 0 ]];then
+                        # se non ho definizioni shortname
+                        # o prendo la prima definizione alternate in lingua 
+                        IFS=";" read -a X <<< ${ALTERNATES_ARRAY[0]}
+                        name_local=${X[3]}
+                        MESSAGE='0 preferred 0 shortname tra gli alternates trovati'
+                        # o il nome inglese
+                        # name_local=$name_english
+                    elif [[ ${#SHORT_ARRAY[@]} == 1 ]]; then
+                        # se ho un solo shortname=1 allora ok
+                        IFS=";" read -a X <<< $SHORT_ARRAY_STRING
+                        name_local=${X[3]}
+                    elif [[ ${#SHORT_ARRAY[@]} > 1 ]]; then
+                        # se piu' di una definizione risulta shortname
+                        # per ora prendo la prima arbitrariamente
+                        IFS=";" read -a X <<< ${SHORT_ARRAY[0]}
+                        name_local=${X[3]}
+                        MESSAGE='>1 shortname, 0 preferred tra gli alternates trovati'
+                    fi
+                # EOF blocco da ripetere
             fi
         fi
     elif [[ ${#ALTERNATES_ARRAY[@]} == 1 ]]; then
